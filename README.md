@@ -44,7 +44,7 @@ version: '3.8'
 
 services:
   portracker:
-    image: your-docker-hub/portracker:latest # Replace with your Docker Hub image
+    image: mostafawahied/portracker:latestimage
     container_name: portracker
     restart: unless-stopped
     network_mode: "host"
@@ -81,7 +81,7 @@ docker run -d \
   # -v /run/middleware/middlewared.sock:/var/run/middlewared.sock:ro \ # Add this line ONLY for TrueNAS SCALE
   -e DATABASE_PATH=/data/portracker.db \
   -e PORT=4999 \
-  mostafawahied/portracker:latest # Replace with your Docker Hub image
+  mostafawahied/portracker:latest
 ```
 
 ## Configuration
