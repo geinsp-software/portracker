@@ -58,18 +58,34 @@ jobs:
       - name: Test Docker image
         if: github.event_name != 'pull_request'
         run: |
+          # Start container with correct port and give it time to initialize
           docker run --rm -d --name test-portracker \
-            -e PORT=3000 \
+            -p 4999:4999 \
+            -e PORT=4999 \
             -e DATABASE_PATH=/data/test.db \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
           
-          sleep 10
+          # Wait for startup and show logs if it fails
+          sleep 15
           
-          if docker ps | grep test-portracker; then
-            echo "✅ Container started successfully"
-            docker stop test-portracker
-          else
+          # Check if container is still running
+          if ! docker ps | grep test-portracker; then
             echo "❌ Container failed to start or crashed"
-            docker logs test-portracker || true
+            echo "📋 Container logs:"
+            docker logs test-portracker 2>/dev/null || echo "No logs available"
             exit 1
           fi
+          
+          # Test the correct health endpoint from host
+          if curl -f http://localhost:4999/api/health; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            echo "📋 Container logs:"
+            docker logs test-portracker
+            docker stop test-portracker
+            exit 1
+          fi
+          
+          echo "✅ Container test completed successfully"
+          docker stop test-portracker
