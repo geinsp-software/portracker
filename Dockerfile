@@ -1,0 +1,88 @@
+# Frontend Build Stage
+FROM node:20-bookworm AS frontend-build
+WORKDIR /app/frontend
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci --include=dev && npm cache clean --force && rm -rf ~/.npm
+
+# Copy source and build
+COPY frontend/ ./
+
+# Build with verbose output for debugging
+RUN npm run build --verbose
+
+# Verify build output exists
+RUN ls -la dist/ && echo "Frontend build verification complete"
+
+# Backend Build Stage
+FROM node:20-bookworm AS backend-build
+WORKDIR /app/backend
+
+# Install build dependencies for native modules
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY backend/package*.json ./
+
+# Install dependencies
+RUN npm ci --omit=dev
+
+# Copy backend source
+COPY backend/ ./
+
+# Final Runtime Stage
+FROM node:20-slim AS production
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    iproute2 \
+    iputils-ping \
+    docker.io \
+    netcat-openbsd \
+    wget \
+    sqlite3 \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the properly compiled backend
+COPY --from=backend-build /app/backend ./backend/
+
+# Copy built frontend assets
+COPY --from=frontend-build /app/frontend/dist ./backend/public/
+
+# Verify frontend files were copied to backend
+RUN ls -la ./backend/public/ && echo "Frontend files copied successfully"
+
+# Create data directory
+RUN mkdir -p /data
+
+# Set working directory to backend
+WORKDIR /app/backend
+
+# Environment variables
+ENV PORT=3000
+ENV DATABASE_PATH=/data/portracker.db
+
+# Volume for data persistence
+VOLUME /data
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/servers || exit 1
+
+# Run the application
+CMD ["node", "index.js"]
