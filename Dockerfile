@@ -55,7 +55,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy the properly compiled backend
+# Copy package files to the backend directory
+COPY --from=backend-build /app/backend/package*.json ./backend/
+
+# Copy the rest of the compiled backend
 COPY --from=backend-build /app/backend ./backend/
 
 # Copy built frontend assets

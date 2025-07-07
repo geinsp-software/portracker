@@ -60,7 +60,6 @@ jobs:
         run: |
           # Start container with correct port and give it time to initialize
           docker run --rm -d --name test-portracker \
-            -p 4999:4999 \
             -e PORT=4999 \
             -e DATABASE_PATH=/data/test.db \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
