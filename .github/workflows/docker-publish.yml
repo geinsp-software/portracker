@@ -55,42 +55,36 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
-      - name: Test Docker image
+            - name: Test Docker image
         if: github.event_name != 'pull_request'
         run: |
-          # Create a temporary data directory for the test
           mkdir -p $RUNNER_TEMP/portracker-test-data
-          
-          # Start container with all necessary mounts
-          docker run --rm -d --name test-portracker \
+          chmod 777 $RUNNER_TEMP/portracker-test-data
+
+          docker run --rm -d --name test-portracker --user root \
             -p 4999:4999 \
             -v /var/run/docker.sock:/var/run/docker.sock:ro \
             -v $RUNNER_TEMP/portracker-test-data:/data \
             -e PORT=4999 \
             -e DATABASE_PATH=/data/test.db \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-          
-          # Wait for startup
+
           sleep 15
-          
-          # Check if container is still running
+
           if ! docker ps | grep test-portracker; then
             echo "❌ Container failed to start or crashed"
             echo "📋 Container logs:"
             docker logs test-portracker 2>/dev/null || echo "No logs available"
             exit 1
           fi
-          
-          # Test the health endpoint
+
           if curl -f http://localhost:4999/api/health; then
             echo "✅ Health check passed"
           else
             echo "❌ Health check failed"
-            echo "📋 Container logs:"
             docker logs test-portracker
-            docker stop test-portracker
             exit 1
           fi
-          
-          echo "✅ Container test completed successfully"
+
           docker stop test-portracker
+
