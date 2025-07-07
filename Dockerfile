@@ -71,14 +71,14 @@ RUN mkdir -p /data
 WORKDIR /app/backend
 
 # Environment variables
-ENV PORT=3000
+ENV PORT=4999
 ENV DATABASE_PATH=/data/portracker.db
 
 # Volume for data persistence
 VOLUME /data
 
 # Expose port
-EXPOSE 3000
+EXPOSE 4999
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
