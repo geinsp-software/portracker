@@ -58,9 +58,14 @@ jobs:
       - name: Test Docker image
         if: github.event_name != 'pull_request'
         run: |
+          # Create a temporary data directory for the test
+          mkdir -p $RUNNER_TEMP/portracker-test-data
+          
+          # Start container with all necessary mounts
           docker run --rm -d --name test-portracker \
             -p 4999:4999 \
             -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v $RUNNER_TEMP/portracker-test-data:/data \
             -e PORT=4999 \
             -e DATABASE_PATH=/data/test.db \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
@@ -76,7 +81,7 @@ jobs:
             exit 1
           fi
           
-          # Test the health endpoint from the host
+          # Test the health endpoint
           if curl -f http://localhost:4999/api/health; then
             echo "✅ Health check passed"
           else

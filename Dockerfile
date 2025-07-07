@@ -77,6 +77,12 @@ ENV DATABASE_PATH=/data/portracker.db
 # Volume for data persistence
 VOLUME /data
 
+# Ensure /data directory permissions are correct for SQLite
+RUN chmod 755 /data && chown node:node /data
+
+# Switch to non-root user
+USER node
+
 # Expose port
 EXPOSE 4999
 
