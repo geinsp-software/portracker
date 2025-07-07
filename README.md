@@ -101,7 +101,7 @@ Configure `portracker` using environment variables.
 ## Technical Stack
 
 *   **Backend**: Node.js, Express, WebSocket, better-sqlite3
-*   **Frontend**: React, Vite, Tailwind CSS, [Shadcn UI](https://ui.shadcn.com/)
+*   **Frontend**: React, Vite, Tailwind CSS, Shadcn UI
 *   **Containerization**: Docker
 
 ## Roadmap
@@ -116,4 +116,4 @@ Contributions are welcome! Please feel free to open an issue to report a bug or 
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE)
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/Mostafa-Wahied/portracker/blob/main/LICENSE)
