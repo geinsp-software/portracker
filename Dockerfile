@@ -73,6 +73,8 @@ WORKDIR /app/backend
 # Environment variables
 ENV PORT=4999
 ENV DATABASE_PATH=/data/portracker.db
+ENV NODE_ENV=production
+
 
 # Volume for data persistence
 VOLUME /data
