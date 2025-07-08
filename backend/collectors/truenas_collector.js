@@ -50,7 +50,7 @@ class TrueNASCollector extends BaseCollector {
       );
     }
 
-    // Important ports by service (with correct protocols)
+    // Important ports by service (with protocols)
     this.importantPorts = {
       51820: { service: "WireGuard", protocol: "udp" },
       51821: { service: "WireGuard-UI", protocol: "tcp" },
@@ -473,13 +473,13 @@ class TrueNASCollector extends BaseCollector {
    * @returns {string} Resolved IP address
    */
   _resolveHostIP(host_ip) {
+    if (host_ip === "0.0.0.0" || host_ip === "::") {
+      return host_ip;
+    }
+
     switch (host_ip) {
       case "*":
-      case "0.0.0.0":
-      case "::":
-        const resolvedIP = this._getServerIP();
-        this.log(`Resolved wildcard '${host_ip}' to: ${resolvedIP}`);
-        return resolvedIP;
+        return "0.0.0.0"; 
       case "127.0.0.1":
       case "localhost":
         return "127.0.0.1";
@@ -489,105 +489,60 @@ class TrueNASCollector extends BaseCollector {
   }
 
   /**
-   * Get the actual server IP address with TrueNAS IX dedicated IP support
-   * @returns {string} Server IP address
+   * @returns {string} Server IP address, now always '0.0.0.0' for wildcard.
    */
   _getServerIP() {
+    // Try to get the server IP from the server's own configuration
     try {
       const os = require("os");
       const networkInterfaces = os.networkInterfaces();
-      const truenasAppInterfaces = Object.keys(networkInterfaces).filter(
-        (name) =>
-          name.startsWith("ix-") ||
-          name.startsWith("truenas-") ||
-          name.includes("app-") ||
-          name.includes("scale-")
-      );
-      for (const interfaceName of truenasAppInterfaces) {
-        const addresses = networkInterfaces[interfaceName];
-        for (const addr of addresses) {
-          if (!addr.internal && addr.family === "IPv4") {
-            this.log(
-              `Found TrueNAS app interface ${interfaceName}: ${addr.address}`
-            );
-            return addr.address;
-          }
-        }
-      }
-      const mainInterfaces = ["enp", "eth", "ens", "em"]
-        .map((prefix) =>
-          Object.keys(networkInterfaces).find((name) => name.startsWith(prefix))
-        )
-        .filter(Boolean);
-      for (const interfaceName of mainInterfaces) {
-        const addresses = networkInterfaces[interfaceName];
-        for (const addr of addresses) {
-          if (!addr.internal && addr.family === "IPv4") {
-            if (
-              addr.address.startsWith("10.") ||
-              addr.address.startsWith("192.168.") ||
-              (addr.address.startsWith("172.") &&
-                !addr.address.startsWith("172.1"))
-            ) {
-              this.log(
-                `Found main interface ${interfaceName}: ${addr.address}`
-              );
+      
+      // Look for primary network interfaces (not Docker bridges or virtual interfaces)
+      const primaryInterfaces = ['eth0', 'enp0s3', 'enp0s8', 'ens33', 'ens160', 'em0'];
+      
+      for (const interfaceName of primaryInterfaces) {
+        if (networkInterfaces[interfaceName]) {
+          const addresses = networkInterfaces[interfaceName];
+          for (const addr of addresses) {
+            if (!addr.internal && addr.family === 'IPv4') {
+              this.log(`Found primary interface ${interfaceName}: ${addr.address}`);
               return addr.address;
             }
           }
         }
       }
-      for (const interfaceName in networkInterfaces) {
-        if (
-          interfaceName.startsWith("docker") ||
-          interfaceName.startsWith("br-") ||
-          interfaceName === "bridge"
-        ) {
+      
+      // Fallback: look for any non-internal, non-Docker interface
+      for (const [interfaceName, addresses] of Object.entries(networkInterfaces)) {
+        // Skip Docker, bridge, and virtual interfaces
+        if (interfaceName.startsWith('docker') || 
+            interfaceName.startsWith('br-') ||
+            interfaceName.startsWith('veth') ||
+            interfaceName === 'lo') {
           continue;
         }
-        const addresses = networkInterfaces[interfaceName];
+        
         for (const addr of addresses) {
-          if (!addr.internal && addr.family === "IPv4") {
-            if (
-              !addr.address.startsWith("172.16.") &&
-              !addr.address.startsWith("172.17.") &&
-              !addr.address.startsWith("172.18.") &&
-              !addr.address.startsWith("172.19.")
-            ) {
-              this.log(
-                `Found non-Docker interface ${interfaceName}: ${addr.address}`
-              );
+          if (!addr.internal && addr.family === 'IPv4') {
+            // Prefer private network IPs
+            if (addr.address.startsWith('192.168.') ||
+                addr.address.startsWith('10.') ||
+                (addr.address.startsWith('172.') && 
+                 parseInt(addr.address.split('.')[1]) >= 16 && 
+                 parseInt(addr.address.split('.')[1]) <= 31)) {
+              this.log(`Found suitable interface ${interfaceName}: ${addr.address}`);
               return addr.address;
             }
           }
         }
       }
-      const dockerInterfaces = Object.keys(networkInterfaces).filter(
-        (name) =>
-          name.startsWith("docker") ||
-          name.startsWith("br-") ||
-          name === "bridge"
-      );
-      for (const interfaceName of dockerInterfaces) {
-        const addresses = networkInterfaces[interfaceName];
-        for (const addr of addresses) {
-          if (
-            !addr.internal &&
-            addr.family === "IPv4" &&
-            !addr.address.startsWith("172.17.")
-          ) {
-            this.log(
-              `Fallback Docker bridge interface ${interfaceName}: ${addr.address}`
-            );
-            return addr.address;
-          }
-        }
-      }
+      
+      this.logWarn("Could not determine server IP, falling back to 0.0.0.0");
+      return "0.0.0.0";
     } catch (error) {
-      this.logError("Error resolving server IP:", error.message);
+      this.logError("Error determining server IP:", error.message);
+      return "0.0.0.0";
     }
-    this.log("Could not resolve server IP, using localhost");
-    return "127.0.0.1";
   }
 
   /**
@@ -628,7 +583,7 @@ class TrueNASCollector extends BaseCollector {
 
         let resolvedHostIP;
         if (address === "0.0.0.0" || address === "::") {
-          resolvedHostIP = this._getServerIP();
+          resolvedHostIP = "0.0.0.0";
         } else {
           resolvedHostIP = address;
         }
@@ -1703,7 +1658,7 @@ class TrueNASCollector extends BaseCollector {
       this.log("=== End Network Debug ===");
       const context = this._detectNetworkContext();
       this.log("Network context:", context);
-      const resolvedIP = this._getServerIP();
+      const resolvedIP = "0.0.0.0";
       this.log(`Final resolved IP: ${resolvedIP}`);
     } catch (error) {
       this.logError("Error debugging network interfaces:", error.message);

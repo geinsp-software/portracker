@@ -32,8 +32,10 @@ export default function App() {
   const [draftNote, setDraftNote] = useState("");
 
   const [actionFeedback, setActionFeedback] = useState({
-    type: null,
-    id: null,
+    copy: null,
+    edit: null,
+    hide: null,
+    unhide: null,
   });
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -904,9 +906,15 @@ export default function App() {
             navigator.clipboard
               .writeText(urlToCopy)
               .then(() => {
-                setActionFeedback({ type: "copy", id: keyOf(server.id, p) });
+                setActionFeedback(prev => ({ 
+                  ...prev, 
+                  copy: { id: keyOf(server.id, p) } 
+                }));
                 setTimeout(
-                  () => setActionFeedback({ type: null, id: null }),
+                  () => setActionFeedback(prev => ({ 
+                    ...prev, 
+                    copy: null 
+                  })),
                   1500
                 );
               })
@@ -1059,8 +1067,14 @@ export default function App() {
     try {
       const successful = document.execCommand("copy");
       if (successful) {
-        setActionFeedback({ type: "copy", id: keyOf(serverId, port) });
-        setTimeout(() => setActionFeedback({ type: null, id: null }), 1500);
+        setActionFeedback(prev => ({ 
+          ...prev, 
+          copy: { id: keyOf(serverId, port) } 
+        }));
+        setTimeout(() => setActionFeedback(prev => ({ 
+          ...prev, 
+          copy: null 
+        })), 1500);
       } else {
         prompt("Copy this URL:", text);
       }

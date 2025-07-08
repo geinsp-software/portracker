@@ -365,36 +365,58 @@ app.get("/api/servers/:id/scan", async (req, res) => {
           );
         }
 
-        const peerResponse = await fetch(peerScanUrl, { timeout: 15000 });
-
-        if (!peerResponse.ok) {
-          let errorBody = "Peer responded with an error.";
-          try {
-            errorBody = await peerResponse.text();
-          } catch (e) {
-            /* ignore */
-          }
-          console.warn(
-            `[Server] WARN: [GET /api/servers/${serverId}/scan] Peer server at ${server.url} responded with status ${peerResponse.status}. Body: ${errorBody}`
-          );
-          return res.status(peerResponse.status).json({
-            error: `Peer server scan failed with status ${peerResponse.status}`,
-            details: errorBody,
-            serverId: serverId,
-            peerUrl: server.url,
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        try {
+          const peerResponse = await fetch(peerScanUrl, { 
+            signal: controller.signal 
           });
-        }
+          clearTimeout(timeoutId);
 
-        const peerScanData = await peerResponse.json();
-        if (currentDebug) {
+          if (!peerResponse.ok) {
+            let errorBody = "Peer responded with an error.";
+            try {
+              errorBody = await peerResponse.text();
+            } catch (e) {
+              /* ignore */
+            }
+            console.warn(
+              `[Server] WARN: [GET /api/servers/${serverId}/scan] Peer server at ${server.url} responded with status ${peerResponse.status}. Body: ${errorBody}`
+            );
+            return res.status(peerResponse.status).json({
+              error: `Peer server scan failed with status ${peerResponse.status}`,
+              details: errorBody,
+              serverId: serverId,
+              peerUrl: server.url,
+            });
+          }
+
+          const peerScanData = await peerResponse.json();
+          if (currentDebug) {
+            console.log(
+              `[Server] DEBUG: [GET /api/servers/${serverId}/scan] Successfully received scan data from peer ${serverId}`
+            );
+          }
           console.log(
-            `[Server] DEBUG: [GET /api/servers/${serverId}/scan] Successfully received scan data from peer ${serverId}`
+            `[Server] INFO: [GET /api/servers/${serverId}/scan] Successfully scanned remote peer. Peer: ${server.label} (${serverId})`
           );
+          return res.json(peerScanData);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          if (fetchError.name === 'AbortError') {
+            console.error(
+              `[Server] ERROR: [GET /api/servers/${serverId}/scan] Timeout after 15s communicating with peer ${server.label} at ${server.url}`
+            );
+            return res.status(408).json({
+              error: "Request timeout - peer server took too long to respond",
+              details: "Connection timed out after 15 seconds",
+              serverId: serverId,
+              peerUrl: server.url,
+            });
+          }
+          throw fetchError;
         }
-        console.log(
-          `[Server] INFO: [GET /api/servers/${serverId}/scan] Successfully scanned remote peer. Peer: ${server.label} (${serverId})`
-        );
-        return res.json(peerScanData);
       } catch (fetchError) {
         console.error(
           `[Server] ERROR: [GET /api/servers/${serverId}/scan] Failed to fetch scan data from peer ${server.label} at ${server.url}:`,

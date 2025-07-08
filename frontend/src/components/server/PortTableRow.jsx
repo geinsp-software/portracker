@@ -49,19 +49,18 @@ function PortTableRowComponent({
   const shouldHighlight = !!searchTerm;
 
   let hostForUi;
-  if (
-    serverId &&
-    serverId !== "local" &&
-    serverUrl &&
-    (port.host_ip === "0.0.0.0" || port.host_ip === "127.0.0.1")
-  ) {
-    try {
-      hostForUi = new URL(serverUrl).hostname;
-    } catch {
+  if (port.host_ip === "0.0.0.0" || port.host_ip === "127.0.0.1") {
+    if (serverId === "local") {
+      hostForUi = window.location.hostname;
+    } else if (serverUrl) {
+      try {
+        hostForUi = new URL(serverUrl).hostname;
+      } catch {
+        hostForUi = "localhost";
+      }
+    } else {
       hostForUi = "localhost";
     }
-  } else if (port.host_ip === "0.0.0.0" || port.host_ip === "127.0.0.1") {
-    hostForUi = "localhost";
   } else {
     hostForUi = port.host_ip;
   }
