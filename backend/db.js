@@ -84,7 +84,7 @@ if (!tableExists) {
       FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
     );
 `);
-  createNotesTable.run();
+  // createNotesTable.run();
 
   // Add updated_at to notes table if it doesn't exist
   try {
