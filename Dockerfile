@@ -73,23 +73,15 @@ WORKDIR /app/backend
 # Environment variables
 ENV PORT=4999
 ENV DATABASE_PATH=/data/portracker.db
-ENV NODE_ENV=production
-
 
 # Volume for data persistence
 VOLUME /data
-
-# Ensure /data directory permissions are correct for SQLite
-RUN chmod 755 /data && chown node:node /data
-
-# Switch to non-root user
-USER node
 
 # Expose port
 EXPOSE 4999
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4999/api/health || exit 1
 
 # Run the application
