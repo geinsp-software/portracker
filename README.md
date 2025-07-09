@@ -8,13 +8,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/your-username/portracker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/your-username/portracker?style=flat-square" alt="License"></a>
-  <a href="https://hub.docker.com/r/your-docker-hub/portracker"><img src="https://img.shields.io/docker/v/your-docker-hub/portracker?label=docker&style=flat-square" alt="Docker Version"></a>
-  <a href="https://github.com/your-username/portracker/actions"><img src="https://img.shields.io/github/actions/workflow/status/your-username/portracker/docker-publish.yml?style=flat-square" alt="Build Status"></a>
+  <a href="https://github.com/mostafa-wahied/portracker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/mostafa-wahied/portracker?style=flat-square" alt="License"></a>
+  <a href="https://hub.docker.com/r/mostafawahied/portracker"><img src="https://img.shields.io/docker/v/mostafawahied/portracker?label=docker&style=flat-square" alt="Docker Version"></a>
+  <a href="https://github.com/mostafa-wahied/portracker/actions"><img src="https://img.shields.io/github/actions/workflow/status/mostafa-wahied/portracker/docker-publish.yml?style=flat-square" alt="Build Status"></a>
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/your-username/portracker/main/path/to/screenshot.png" alt="portracker Dashboard Screenshot" style="width: 80%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
+  <img src="screenshots\main-dark.png" alt="portracker Dashboard Screenshot" style="width: 80%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
 </p>
 
 By auto-discovering services on your systems, portracker provides a live, accurate map of your network. It helps eliminate manual tracking in spreadsheets and prevents deployment failures caused by port conflicts.
@@ -24,12 +24,14 @@ By auto-discovering services on your systems, portracker provides a live, accura
 ## Key Features
 
 *   **Automatic Port Discovery**: Scans the host system to find and display running services and their ports automatically. No manual data entry is needed.
-*   **Platform-Specific Collectors**: Includes specialized collectors for Docker and TrueNAS SCALE to gather rich, contextual information from the host.
-*   **Lightweight & Self-Contained**: Runs as a single process with an embedded SQLite database. No external database dependencies like PostgreSQL or MySQL are required.
+*   **Platform-Specific Collectors**: Includes specialized collectors for Docker and TrueNAS to gather rich, contextual information from the host.
+*   **Lightweight & Self-Contained**: Runs as a single process with an embedded SQLite database. No external database dependencies like PostgreSQL or Redis are required.
 *   **Peer-to-Peer Monitoring**: Add other `portracker` instances as peers to view all your servers, containers, and VMs from a single dashboard.
-*   **Hierarchical Grouping**: Organize servers in a parent-child structure, perfect for nesting a VM's `portracker` instance under its physical host.
-*   **Enhanced TrueNAS Discovery**: Providing an optional TrueNAS API key allows `portracker` to discover running VMs and gather enhanced system information like the OS version and uptime.
+*   **Hierarchical Grouping**: Organize servers in a parent-child structure, perfect for nesting servers, e.g. a VM's `portracker` instance under its physical host.
+*   **Enhanced TrueNAS Discovery**: Providing an optional TrueNAS API key allows `portracker` to discover running VMs* and gather enhanced system information like the OS version and uptime.
 *   **Modern & Responsive UI**: A clean dashboard with light/dark modes, live filtering, and multiple data layout views (list, grid, table).
+
+<sub>*Note: VMs discovered on TrueNAS with the optional API key are shown in read-only mode. To enable full monitoring, deploy a Portracker instance on each VM and add it as a separate server.*</sub>
 
 ## Deployment
 
@@ -44,7 +46,7 @@ version: '3.8'
 
 services:
   portracker:
-    image: mostafawahied/portracker:latestimage
+    image: mostafawahied/portracker:latest
     container_name: portracker
     restart: unless-stopped
     network_mode: "host"
@@ -53,7 +55,7 @@ services:
       - ./portracker-data:/data
       # Required for discovering services running in Docker
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # Required ONLY if running on a TrueNAS SCALE host
+      # Required ONLY if running on a TrueNAS host
       # - /run/middleware/middlewared.sock:/var/run/middlewared.sock:ro
     environment:
       - DATABASE_PATH=/data/portracker.db
@@ -78,7 +80,7 @@ docker run -d \
   --network host \
   -v ./portracker-data:/data \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  # -v /run/middleware/middlewared.sock:/var/run/middlewared.sock:ro \ # Add this line ONLY for TrueNAS SCALE
+  # -v /run/middleware/middlewared.sock:/var/run/middlewared.sock:ro \ # Add this line ONLY for TrueNAS servers
   -e DATABASE_PATH=/data/portracker.db \
   -e PORT=4999 \
   mostafawahied/portracker:latest
@@ -90,13 +92,15 @@ Configure `portracker` using environment variables.
 
 | Variable           | Description                                               | Default                 |
 |--------------------|-----------------------------------------------------------|-------------------------|
-| `PORT`             | The port the web application will run on.                 | `4999`                  |
-| `DATABASE_PATH`    | Path inside the container to the SQLite database file.    | `/data/portracker.db`   |
+| `PORT`*             | The port the web application will run on.                 | `4999`                  |
+| `DATABASE_PATH`*    | Path inside the container to the SQLite database file.    | `/data/portracker.db`   |
 | `TRUENAS_API_KEY`  | Optional API key for enhanced TrueNAS data collection.    | ` `                     |
 | `CACHE_TIMEOUT_MS` | Duration in milliseconds to cache scan results.           | `60000`                 |
 | `DISABLE_CACHE`    | Set to `true` to disable all caching.                     | `false`                 |
 | `INCLUDE_UDP`      | Set to `true` to include UDP ports in scans.              | `false`                 |
 | `DEBUG`            | Set to `true` for verbose application logging.            | `false`                 |
+
+<sub>**Required*</sub>
 
 ## Technical Stack
 
