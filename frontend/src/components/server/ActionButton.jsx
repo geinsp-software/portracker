@@ -12,7 +12,7 @@ export function ActionButton({
   size = "md",
 }) {
   const feedback = actionFeedback[type];
-  const wasClicked = feedback && feedback.key === itemKey;
+  const wasClicked = feedback && feedback.id === itemKey;
   const isLoading =
     loading &&
     feedback &&

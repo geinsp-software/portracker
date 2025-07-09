@@ -882,23 +882,31 @@ export default function App() {
         onToggleIgnore={toggleIgnore}
         onCopy={(p, portProtocol) => {
           let hostForCopy;
-          if (
-            server.id &&
+          if (server.id === "local" &&
+              (p.host_ip === "0.0.0.0" ||
+               p.host_ip === "127.0.0.1" ||
+               p.host_ip === "[::]" ||
+               p.host_ip === "[::1]")) {
+            hostForCopy = window.location.hostname;
+          }
+          else if (
             server.id !== "local" &&
             server.url &&
             (p.host_ip === "0.0.0.0" ||
-              p.host_ip === "127.0.0.1" ||
-              p.host_ip === "[::]" ||
-              p.host_ip === "[::1]")
+             p.host_ip === "127.0.0.1" ||
+             p.host_ip === "[::]" ||
+             p.host_ip === "[::1]")
           ) {
             try {
               hostForCopy = new URL(server.url).hostname;
             } catch {
               hostForCopy = "localhost";
             }
-          } else {
+          }
+          else {
             hostForCopy = p.host_ip;
           }
+
           const actualProtocol = portProtocol || "http";
           const urlToCopy = `${actualProtocol}://${hostForCopy}:${p.host_port}`;
 
