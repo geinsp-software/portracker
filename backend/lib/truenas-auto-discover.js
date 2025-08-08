@@ -4,7 +4,19 @@
  */
 
 const fs = require("fs");
-const debugDiscovery = require("debug")("ports-tracker:truenas:discovery");
+const { Logger } = require('./logger');
+
+// Initialize logger for auto-discovery
+const logger = new Logger("TrueNAS-Discovery", { debug: process.env.DEBUG === 'true' });
+
+/**
+ * Logs a debug message using the TrueNAS-Discovery logger.
+ * @param {string} message - The debug message to log.
+ * @param {...any} args - Additional arguments to include in the log message.
+ */
+function debugDiscovery(message, ...args) {
+  logger.debug(message, ...args);
+}
 
 /**
  * Discover TrueNAS UI configuration via Unix socket
@@ -178,10 +190,10 @@ function callSocketMethod(socketPath, method, options = {}) {
 }
 
 /**
- * Detect network environment and get appropriate host addresses
- * @param {object} [options={}] - Options object
- * @param {boolean} [options.appDebugEnabled=false] - Whether application-level debug is enabled
- * @returns {Array<string>} Host addresses to try
+ * Returns a list of host addresses suitable for connecting to the TrueNAS UI, adapting to local or containerized environments.
+ *
+ * If running inside a container, attempts to detect the default gateway IP and includes additional container-specific addresses.
+ * @returns {Array<string>} Array of host addresses to attempt for network connections.
  */
 function detectHostAddresses(options = {}) {
   const hostAddresses = [];
@@ -192,9 +204,37 @@ function detectHostAddresses(options = {}) {
     process.env.DOCKER_HOST || fs.existsSync("/.dockerenv");
 
   if (isContainerEnvironment) {
+    try {
+      const fs = require("fs");
+      if (fs.existsSync("/proc/net/route")) {
+        const routes = fs.readFileSync("/proc/net/route", "utf8");
+        const lines = routes.split("\n");
+        for (const line of lines) {
+          const fields = line.split("\t");
+          if (fields[1] === "00000000" && fields[7] === "00000000") {
+            const gatewayHex = fields[2];
+            const gateway = [
+              parseInt(gatewayHex.substr(6, 2), 16),
+              parseInt(gatewayHex.substr(4, 2), 16),
+              parseInt(gatewayHex.substr(2, 2), 16),
+              parseInt(gatewayHex.substr(0, 2), 16)
+            ].join(".");
+            
+            if (!hostAddresses.includes(gateway)) {
+              hostAddresses.unshift(gateway);
+            }
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      // Fallback silently
+    }
+    
     hostAddresses.push("host.docker.internal");
     hostAddresses.push("172.17.0.1");
   }
+  
   return hostAddresses;
 }
 

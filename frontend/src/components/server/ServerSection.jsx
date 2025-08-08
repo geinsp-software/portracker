@@ -19,6 +19,7 @@ import { PortGridItem } from "./PortGridItem";
 import { PortTable } from "./PortTable";
 import { HiddenPortsDrawer } from "./HiddenPortsDrawer";
 import { SystemInfoCard } from "./SystemInfoCard";
+import Logger from "../../lib/logger";
 import { VMsCard } from "./VMsCard";
 import {
   Accordion,
@@ -33,6 +34,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/**
+ * Renders a comprehensive server overview section, including system information, virtual machines, and port management with sorting, filtering, and multiple layout options.
+ *
+ * Displays server status, host details, and provides interactive controls for sorting and viewing ports in list, grid, card, or table formats. Allows toggling between expanded and collapsed views, managing hidden ports, and switching layouts for system info and VMs. Handles user actions such as copying, editing notes, and toggling port visibility.
+ */
 function ServerSectionComponent({
   server,
   ok,
@@ -56,6 +62,9 @@ function ServerSectionComponent({
   infoCardLayout,
   onInfoCardLayoutChange,
 }) {
+  // Initialize logger for ServerSection component
+  const logger = new Logger('ServerSection');
+  
   const [sortConfig, setSortConfig] = useState(() => {
     try {
       const saved = localStorage.getItem("portSortConfig");
@@ -112,7 +121,7 @@ function ServerSectionComponent({
     try {
       localStorage.setItem("portSortConfig", JSON.stringify(sortConfig));
     } catch (error) {
-      console.warn("Failed to save sort config:", error);
+      logger.warn("Failed to save sort config:", error);
     }
   }, [sortConfig]);
 
@@ -469,9 +478,17 @@ function ServerSectionComponent({
               <ul className="space-y-2">
                 {portsToDisplay.map((port) => (
                   <PortCard
-                    key={`${id}-${port.host_ip}-${port.host_port}`}
+                    key={
+                      port.internal
+                        ? `${id}-${port.container_id || port.app_id}-${port.host_port}-internal`
+                        : `${id}-${port.host_ip}-${port.host_port}`
+                    }
                     port={port}
-                    itemKey={`${id}-${port.host_ip}-${port.host_port}`}
+                    itemKey={
+                      port.internal
+                        ? `${id}-${port.container_id || port.app_id}-${port.host_port}-internal`
+                        : `${id}-${port.host_ip}-${port.host_port}`
+                    }
                     searchTerm={searchTerm}
                     actionFeedback={actionFeedback}
                     onCopy={onCopy}
@@ -483,11 +500,43 @@ function ServerSectionComponent({
                 ))}
               </ul>
             )}
+
+            {portLayout === "card" && (
+              <ul className="space-y-2">
+                {portsToDisplay.map((port) => (
+                  <PortCard
+                    key={
+                      port.internal
+                        ? `${id}-${port.container_id || port.app_id}-${port.host_port}-internal`
+                        : `${id}-${port.host_ip}-${port.host_port}`
+                    }
+                    port={port}
+                    itemKey={
+                      port.internal
+                        ? `${id}-${port.container_id || port.app_id}-${port.host_port}-internal`
+                        : `${id}-${port.host_ip}-${port.host_port}`
+                    }
+                    searchTerm={searchTerm}
+                    actionFeedback={actionFeedback}
+                    onCopy={onCopy}
+                    onEdit={onNote}
+                    onToggleIgnore={onToggleIgnore}
+                    serverId={id}
+                    serverUrl={serverUrl}
+                  />
+                ))}
+              </ul>
+            )}
+
             {portLayout === "grid" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {portsToDisplay.map((port) => (
                   <PortGridItem
-                    key={`${id}-${port.host_ip}-${port.host_port}`}
+                    key={
+                      port.internal
+                        ? `${id}-${port.container_id || port.app_id}-${port.host_port}-internal`
+                        : `${id}-${port.host_ip}-${port.host_port}`
+                    }
                     port={port}
                     searchTerm={searchTerm}
                     actionFeedback={actionFeedback}

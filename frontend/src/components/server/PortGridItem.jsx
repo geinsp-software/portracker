@@ -33,6 +33,11 @@ const renderHighlightedText = (content) => {
   );
 };
 
+/**
+ * Displays detailed information and interactive actions for a network port, with optional search term highlighting.
+ *
+ * Renders a styled UI card showing port status, clickable port number, internal port details, owner, notes, source, creation date, and host information. Provides actions for copying, editing notes, and toggling ignore state, with dynamic highlighting of search matches.
+ */
 export function PortGridItem({
   port,
   serverId,
@@ -120,12 +125,15 @@ export function PortGridItem({
         <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity ml-2">
           <PortActions
             port={port}
-            itemKey={`${serverId}-${port.host_ip}-${port.host_port}`}
+            itemKey={
+              port.internal
+                ? `${serverId}-${port.container_id || port.app_id}-${port.host_port}-internal`
+                : `${serverId}-${port.host_ip}-${port.host_port}`
+            }
             actionFeedback={actionFeedback}
             onCopy={() => onCopy(port, protocol)}
             onEdit={() => onNote(serverId, port)}
             onHide={() => onToggleIgnore(serverId, port)}
-            size="sm"
           />
         </div>
       </div>
